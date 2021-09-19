@@ -85,7 +85,20 @@ if args.function == 'pretrain':
     #     warmup_tokens=512*20
     #     final_tokens=200*len(pretrain_dataset)*block_size
     #     num_workers=4
-    raise NotImplementedError
+    
+    tconf = trainer.TrainerConfig(max_epochs=650, batch_size=128,
+            learning_rate=6e-3, lr_decay=True,
+            warmup_tokens=512*20,
+            final_tokens=200*len(pretrain_dataset)*block_size,
+            num_workers=4)
+
+    transformer_trainer = trainer.Trainer(transformer_model,
+            train_dataset, None, tconf)
+    transformer_trainer.train()
+    torch.save(transformer_model.state_dict(),
+            args.writing_params_path)
+
+    #raise NotImplementedError
 elif args.function == 'finetune':
     assert args.writing_params_path is not None
     assert args.finetune_corpus_path is not None
@@ -117,6 +130,7 @@ elif args.function == 'finetune':
     #         warmup_tokens=512*20
     #         final_tokens=200*len(pretrain_dataset)*block_size
     #         num_workers=4
+    
     train_dataset = dataset.NameDataset(pretrain_dataset,
             open(args.finetune_corpus_path).read())
     if args.reading_params_path is None:
@@ -139,6 +153,8 @@ elif args.function == 'evaluate':
     assert args.reading_params_path is not None
     assert args.eval_corpus_path is not None
     model.load_state_dict(torch.load(args.reading_params_path))
+    #model = transformer_model
+    #model.load_state_dict(torch.load(args.reading_params_path, map_location=torch.device('cpu')))
     correct = 0
     total = 0
     with open(args.outputs_path, 'w') as fout:
