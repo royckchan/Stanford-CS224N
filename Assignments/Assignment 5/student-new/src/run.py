@@ -56,9 +56,9 @@ Don't change above here; write your code below
 
 if args.variant == 'vanilla':
     #pass # TODO [part c]: Make some model here
-    transformer_model = model.GPT(mconf)
+    model = model.GPT(mconf)
     #print('hi')
-    #print('state_dict:', transformer_model.state_dict().keys())
+    #print('state_dict:', model.state_dict().keys())
     #import sys
     #sys.exit()
 elif args.variant == 'synthesizer':
@@ -92,10 +92,9 @@ if args.function == 'pretrain':
             final_tokens=200*len(pretrain_dataset)*block_size,
             num_workers=4)
 
-    transformer_trainer = trainer.Trainer(transformer_model,
-            train_dataset, None, tconf)
-    transformer_trainer.train()
-    torch.save(transformer_model.state_dict(),
+    trainer = trainer.Trainer(model, pretrain_dataset, None, tconf)
+    trainer.train()
+    torch.save(model.state_dict(),
             args.writing_params_path)
 
     #raise NotImplementedError
@@ -139,12 +138,17 @@ elif args.function == 'finetune':
                 warmup_tokens=512*20,
                 final_tokens=200*len(pretrain_dataset)*block_size,
                 num_workers=4)
-    #else:
-    #    pass
-    transformer_trainer = trainer.Trainer(transformer_model,
-            train_dataset, None, tconf)
-    transformer_trainer.train()
-    torch.save(transformer_model.state_dict(),
+    else:
+        model.load_state_dict(torch.load(args.reading_params_path,
+            map_location=torch.device(device)))
+        tconf = trainer.TrainerConfig(max_epochs=10, batch_size=256,
+                learning_rate=6e-4, lr_decay=True,
+                warmup_tokens=512*20,
+                final_tokens=200*len(pretrain_dataset)*block_size,
+                num_workers=4)
+    trainer = trainer.Trainer(model, train_dataset, None, tconf)
+    trainer.train()
+    torch.save(model.state_dict(),
             args.writing_params_path)
 
     #raise NotImplementedError
@@ -153,8 +157,7 @@ elif args.function == 'evaluate':
     assert args.reading_params_path is not None
     assert args.eval_corpus_path is not None
     model.load_state_dict(torch.load(args.reading_params_path))
-    #model = transformer_model
-    #model.load_state_dict(torch.load(args.reading_params_path, map_location=torch.device('cpu')))
+    #model.load_state_dict(torch.load(args.reading_params_path, map_location=torch.device(device)))
     correct = 0
     total = 0
     with open(args.outputs_path, 'w') as fout:
