@@ -168,12 +168,41 @@ class CharCorruptionDataset(Dataset):
 
     def __getitem__(self, idx):
         # TODO [part e]: see spec above
-        raise NotImplementedError
+        #raise NotImplementedError
+
+        # Step 0: retrieve the element at the given index
+        doc = self.data[idx]
+        # Step 1: truncate the document
+        lb_length_doc, ub_length_doc = 4, int(self.block_size*7/8)
+        ub_length_doc = max(ub_length_doc, lb_length_doc)
+        length_doc = random.randint(lb_length_doc, ub_length_doc)
+        doc = doc[:length_doc]
+        # Step 2: break the truncated document into three substrings
+        # The length of masked content is 1/4 (20%-30%)
+        # of that of truncated document on average 
+        len_masked_content = random.randint(int(len(doc) * 0.2), int(len(doc) * 0.3))
+        len_masked_content = max(len_masked_content, 1)
+        len_prefix = random.randint(1, len(doc) - len_masked_content)
+        prefix, masked_content, suffix = (doc[:len_prefix],
+                doc[len_prefix:len_prefix+len_masked_content], doc[len_prefix+len_masked_content:]) 
+        # Step 3: rearrange the substrings
+        masked_string = prefix + self.MASK_CHAR + suffix + self.MASK_CHAR + masked_content + self.MASK_CHAR
+        masked_string = masked_string + self.PAD_CHAR*(self.block_size - len(masked_string))
+        # Step 4: construct the input and output example pair
+        x, y = masked_string[:-1], masked_string[1:]
+        # Step 5: encode the input and output strings as Long tensors, and return
+        x = torch.tensor([self.stoi[c] for c in x], dtype=torch.long)
+        y = torch.tensor([self.stoi[c] for c in y], dtype=torch.long)
+        #print('self.block_size:', self.block_size)
+        #print('len(masked_string):', len(masked_string))
+        #print('len(x), len(y):', len(x), len(y))
+        return x, y
 
 """
 Code under here is strictly for your debugging purposes; feel free to modify
 as desired.
 """
+
 if __name__ == '__main__':
     argp = argparse.ArgumentParser()
     argp.add_argument('dataset_type', help="Type of dataset to sample from."
