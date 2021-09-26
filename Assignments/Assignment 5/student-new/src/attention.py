@@ -91,6 +91,7 @@ class SynthesizerAttention(nn.Module):
         #       How do these map to the matrices in the handout?
 
         B, T, C = x.size()
+        #print('B,T,C:', B,T,C)
 
         # Notations
         # B: batch_size
@@ -98,6 +99,7 @@ class SynthesizerAttention(nn.Module):
         # T -> l, C -> d, nh -> h, hs -> d//h
         # self.w1 -> A, self.w2 -> B, self.b2 -> b_2
         # I think b_1 is included in self.w1 with bias=True
+        # Seems only self.w2[:, :T] and self.b2[:T] are used...
 
         z = F.relu(self.w1(x))
         z = z.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
@@ -105,7 +107,13 @@ class SynthesizerAttention(nn.Module):
 
         # Synthesized attention: (B, nh, T, hs) x (hs, T) + (T) -> (B, nh, T, T)
         #att = torch.inner(z, self.w2)
-        att = F.linear(z, self.w2.transpose(0, 1), bias=self.b2)
+        #print('z.shape:', z.shape)
+        #print('self.w2.shape:', self.w2.shape)
+        #print('self.b2.shape:', self.b2.shape)
+        att = F.linear(z, self.w2[:, :T].transpose(0, 1), bias=self.b2[:T])
+        #print('self.mask.shape:', self.mask.shape)
+        #print('self.mask[:,:,:T,:T].shape:', self.mask[:,:,:T,:T].shape)
+        #print('att.shape:', att.shape)
 
         att = att.masked_fill(self.mask[:,:,:T,:T] == 0, -1e10) # todo: just use float('-inf') instead?
         att = F.softmax(att, dim=-1)
