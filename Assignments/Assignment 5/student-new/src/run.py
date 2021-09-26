@@ -62,7 +62,9 @@ if args.variant == 'vanilla':
     #import sys
     #sys.exit()
 elif args.variant == 'synthesizer':
-    pass # TODO [part g]: Make some other model here
+    #pass # TODO [part g]: Make some other model here
+    mconf.additive = True
+    model = model.GPT(mconf)
 
 # From here on, your code should be identical independent of which
 # variant (vanilla or synthesizer) has been chosen.
@@ -156,8 +158,8 @@ elif args.function == 'evaluate':
     assert args.outputs_path is not None
     assert args.reading_params_path is not None
     assert args.eval_corpus_path is not None
-    model.load_state_dict(torch.load(args.reading_params_path))
-    #model.load_state_dict(torch.load(args.reading_params_path, map_location=torch.device(device)))
+    #model.load_state_dict(torch.load(args.reading_params_path))
+    model.load_state_dict(torch.load(args.reading_params_path, map_location=torch.device(device)))
     correct = 0
     total = 0
     with open(args.outputs_path, 'w') as fout:
